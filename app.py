@@ -12,17 +12,20 @@ lite_session = new_session("u2netp")
 
 @app.route('/', methods=['GET'])
 def health_check():
-    # Adding "v2" so we can physically see when the server updates!
-    return "ThreadFlow AI Server is Live v2!", 200
+    return "ThreadFlow AI Server is Live v3!", 200
 
 @app.route('/remove-bg', methods=['POST'])
 def remove_background():
     try:
-        # Force the server to grab the raw text, ignoring all format rules
         raw_data = request.get_data(as_text=True)
         image_data = base64.b64decode(raw_data)
         
         input_image = Image.open(io.BytesIO(image_data))
+        
+        # 🔥 THE MEMORY FIX: Shrink the physical dimensions to a maximum of 800x800 pixels
+        # This prevents the raw pixel array from overflowing the 512MB RAM limit!
+        input_image.thumbnail((800, 800))
+        
         output_image = remove(input_image, session=lite_session)
         
         img_io = io.BytesIO()
