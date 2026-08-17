@@ -1,11 +1,14 @@
 from flask import Flask, request, send_file
-from rembg import remove
+from rembg import remove, new_session
 from PIL import Image
 import io
 import os
 import base64
 
 app = Flask(__name__)
+
+# 🔥 THE FIX: We load the lightweight "u2netp" model so it easily fits in the free 512MB RAM limit!
+lite_session = new_session("u2netp")
 
 @app.route('/', methods=['GET'])
 def health_check():
@@ -17,9 +20,10 @@ def remove_background():
     data = request.json
     image_data = base64.b64decode(data['image_base64'])
     
-    # Process the AI background removal
     input_image = Image.open(io.BytesIO(image_data))
-    output_image = remove(input_image)
+    
+    # Process the background removal using the lightweight session
+    output_image = remove(input_image, session=lite_session)
     
     # Send the clean image back
     img_io = io.BytesIO()
