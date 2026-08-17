@@ -12,13 +12,15 @@ lite_session = new_session("u2netp")
 
 @app.route('/', methods=['GET'])
 def health_check():
-    return "ThreadFlow AI Server is Live!", 200
+    # Adding "v2" so we can physically see when the server updates!
+    return "ThreadFlow AI Server is Live v2!", 200
 
 @app.route('/remove-bg', methods=['POST'])
 def remove_background():
     try:
-        # We bypassed JSON completely! Just read the raw text directly.
-        image_data = base64.b64decode(request.data)
+        # Force the server to grab the raw text, ignoring all format rules
+        raw_data = request.get_data(as_text=True)
+        image_data = base64.b64decode(raw_data)
         
         input_image = Image.open(io.BytesIO(image_data))
         output_image = remove(input_image, session=lite_session)
