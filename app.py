@@ -7,7 +7,7 @@ import base64
 
 app = Flask(__name__)
 
-# 🔥 THE FIX: We load the lightweight "u2netp" model so it easily fits in the free 512MB RAM limit!
+# Lightweight model to prevent free-server memory crashes
 lite_session = new_session("u2netp")
 
 @app.route('/', methods=['GET'])
@@ -16,21 +16,21 @@ def health_check():
 
 @app.route('/remove-bg', methods=['POST'])
 def remove_background():
-    # Receive the image as a JSON text string
-    data = request.json
-    image_data = base64.b64decode(data['image_base64'])
-    
-    input_image = Image.open(io.BytesIO(image_data))
-    
-    # Process the background removal using the lightweight session
-    output_image = remove(input_image, session=lite_session)
-    
-    # Send the clean image back
-    img_io = io.BytesIO()
-    output_image.save(img_io, 'PNG')
-    img_io.seek(0)
-    
-    return send_file(img_io, mimetype='image/png')
+    try:
+        # We bypassed JSON completely! Just read the raw text directly.
+        image_data = base64.b64decode(request.data)
+        
+        input_image = Image.open(io.BytesIO(image_data))
+        output_image = remove(input_image, session=lite_session)
+        
+        img_io = io.BytesIO()
+        output_image.save(img_io, 'PNG')
+        img_io.seek(0)
+        
+        return send_file(img_io, mimetype='image/png')
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return str(e), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
