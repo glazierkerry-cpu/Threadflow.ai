@@ -23,7 +23,6 @@ def remove_background():
         input_image = Image.open(io.BytesIO(image_data))
         
         # 🔥 THE MEMORY FIX: Shrink the physical dimensions to a maximum of 800x800 pixels
-        # This prevents the raw pixel array from overflowing the 512MB RAM limit!
         input_image.thumbnail((800, 800))
         
         output_image = remove(input_image, session=lite_session)
