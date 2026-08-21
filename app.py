@@ -1,53 +1,58 @@
 import os
+# 🔥 THE MULTI-THREAD FIX: Force the AI to only use 1 CPU thread. 
+# This stops it from multiplying its memory usage and crashing Render!
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
+from flask import Flask, request, send_file
+from rembg import remove, new_session
+from PIL import Image
 import io
 import gc
-from flask import Flask, request, send_file, jsonify
-from rembg import remove, new_session
-from PIL import Image, ImageOps
 
 app = Flask(__name__)
 
-# 🔥 THE FIX: Pre-load the lightweight model at startup to prevent request timeouts
-session = new_session("u2netp")
+# Lightweight model initialized safely to protect memory
+lite_session = new_session("u2netp")
 
 @app.route('/', methods=['GET'])
 def health_check():
-    return "ThreadFlow AI Server is Live v6!", 200
+    # Updating to v7 so we can visually confirm the memory fix deployed!
+    return "ThreadFlow AI Server is Live v7!", 200
 
 @app.route('/remove-bg', methods=['POST'])
 def remove_background():
-    if 'image' not in request.files:
-        return jsonify({"error": "No image file provided"}), 400
-
-    file = request.files['image']
-
     try:
-        # Open and sanitize image
-        image = Image.open(file.stream)
-        image = ImageOps.exif_transpose(image)
+        if 'image' not in request.files:
+            return "No image file provided", 400
+            
+        file = request.files['image']
         
-        if image.mode not in ("RGB", "RGBA"):
-            image = image.convert("RGB")
-
-        # Fallback server-side shrink
-        image.thumbnail((800, 800), Image.Resampling.LANCZOS)
-
-        # Process segmentation
-        output = remove(image, session=session)
-
-        # Output PNG buffer
-        output_io = io.BytesIO()
-        output.save(output_io, format='PNG')
-        output_io.seek(0)
-
-        del image
-        gc.collect()
-
-        return send_file(output_io, mimetype='image/png')
-
+        # Open the image directly from the mobile app's file stream
+        input_image = Image.open(file.stream)
+        
+        # 🔥 THE SIZE FIX: Hard-cap the physical dimensions to 800x800 
+        input_image.thumbnail((800, 800))
+        
+        # Remove the background using restricted CPU power
+        output_image = remove(input_image, session=lite_session)
+        
+        img_io = io.BytesIO()
+        output_image.save(img_io, 'PNG')
+        img_io.seek(0)
+        
+        # 🔥 THE RAM FLUSH FIX: Explicitly delete the heavy data and empty the trash
+        del input_image
+        del output_image
+        gc.collect() 
+        
+        return send_file(img_io, mimetype='image/png')
     except Exception as e:
-        print(f"Error during AI inference: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        print(f"Error: {str(e)}")
+        return str(e), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
