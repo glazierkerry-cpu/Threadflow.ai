@@ -7,7 +7,7 @@ from PIL import Image, ImageOps
 
 app = Flask(__name__)
 
-# Pre-load lightweight model at startup to prevent request timeouts
+# 🔥 THE FIX: Pre-load the lightweight model at startup to prevent request timeouts
 session = new_session("u2netp")
 
 @app.route('/', methods=['GET'])
@@ -29,7 +29,7 @@ def remove_background():
         if image.mode not in ("RGB", "RGBA"):
             image = image.convert("RGB")
 
-        # Fallback server-side resize
+        # Fallback server-side shrink
         image.thumbnail((800, 800), Image.Resampling.LANCZOS)
 
         # Process segmentation
